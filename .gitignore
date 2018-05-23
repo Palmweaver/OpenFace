@@ -93,3 +93,4 @@ matlab_runners/Demos/processed/
 exe/releases/OpenFace_*
 *.suo
 .vs/OpenFace/v15/
+build
