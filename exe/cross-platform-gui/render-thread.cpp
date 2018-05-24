@@ -14,6 +14,10 @@
 
 #include "render-thread.h"
 
+static FaceAnalysis::FaceAnalyser *face_analyser = nullptr;
+static Utilities::RecorderOpenFace *open_face_rec = nullptr;
+static bool can_process = false;
+
 RenderThread::RenderThread(QObject *parent) : QThread(parent) {}
 
 RenderThread::~RenderThread() {
@@ -25,7 +29,17 @@ RenderThread::~RenderThread() {
 }
 
 void RenderThread::do_csv_work(void) {
-  std::cout << "Slot called by timeout\n";
+  can_process = false;
+  auto record = open_face_rec->DumpCurrentRecord();
+  for (auto& kv : record) {
+    std::cout << kv.first << ":" << kv.second << "\n";
+  }
+// for (auto& kv : myMap) {
+  // for (std::string &action_unit: record) {
+  //   std::cout << action_unit << "\n";
+  // }
+  // face_analyser->PostprocessOutputFile(open_face_rec->GetCSVFile());
+  can_process = true;
 }
 
 
@@ -46,14 +60,15 @@ void RenderThread::run() {
   Utilities::SequenceCapture sequence_reader;
 
   FaceAnalysis::FaceAnalyserParameters face_analysis_params(arguments);
-  FaceAnalysis::FaceAnalyser face_analyser(face_analysis_params);
+
+  face_analyser = new FaceAnalysis::FaceAnalyser{face_analysis_params};
 
   if (!face_model.eye_model) {
     std::cout << "WARNING: no eye model found\n";
   }
 
-  if (face_analyser.GetAUClassNames().size() == 0 &&
-      face_analyser.GetAUClassNames().size() == 0) {
+  if (face_analyser->GetAUClassNames().size() == 0 &&
+      face_analyser->GetAUClassNames().size() == 0) {
     std::cout << "WARNING: no Action Unit models found\n";
   }
 
@@ -83,8 +98,8 @@ void RenderThread::run() {
         sequence_reader.cy,
         sequence_reader.fps};
 
-    Utilities::RecorderOpenFace open_face_rec(sequence_reader.name,
-                                              recording_params, arguments);
+    open_face_rec = new Utilities::RecorderOpenFace {sequence_reader.name,
+						     recording_params, arguments};
 
     while (!rgb_image.empty()) {
 
@@ -120,12 +135,12 @@ void RenderThread::run() {
       if (recording_params.outputAlignedFaces() ||
           recording_params.outputHOG() || recording_params.outputAUs() ||
           visualizer.vis_align || visualizer.vis_hog || visualizer.vis_aus) {
-        face_analyser.AddNextFrame(
+        face_analyser->AddNextFrame(
             rgb_image, face_model.detected_landmarks,
             face_model.detection_success, sequence_reader.time_stamp,
             sequence_reader.IsWebcam());
-        face_analyser.GetLatestAlignedFace(sim_warped_img);
-        face_analyser.GetLatestHOG(hog_descriptor, num_hog_rows, num_hog_cols);
+        face_analyser->GetLatestAlignedFace(sim_warped_img);
+        face_analyser->GetLatestHOG(hog_descriptor, num_hog_rows, num_hog_cols);
       }
 
       // Work out the pose of the head from the tracked model
@@ -155,34 +170,33 @@ void RenderThread::run() {
 
       rgb_image = visualizer.GetVisImage();
 
-      open_face_rec.SetObservationHOG(detection_success, hog_descriptor,
+      open_face_rec->SetObservationHOG(detection_success, hog_descriptor,
                                       num_hog_rows, num_hog_cols,
                                       31); // The number of channels in HOG is
                                            // fixed at the moment, as using FHOG
-      open_face_rec.SetObservationVisualization(visualizer.GetVisImage());
-      open_face_rec.SetObservationActionUnits(
-          face_analyser.GetCurrentAUsReg(), face_analyser.GetCurrentAUsClass());
-      open_face_rec.SetObservationLandmarks(
+      open_face_rec->SetObservationVisualization(visualizer.GetVisImage());
+      open_face_rec->SetObservationActionUnits(
+          face_analyser->GetCurrentAUsReg(), face_analyser->GetCurrentAUsClass());
+      open_face_rec->SetObservationLandmarks(
           face_model.detected_landmarks,
           face_model.GetShape(sequence_reader.fx, sequence_reader.fy,
                               sequence_reader.cx, sequence_reader.cy),
           face_model.params_global, face_model.params_local,
           face_model.detection_certainty, detection_success);
-      open_face_rec.SetObservationPose(pose_estimate);
-      open_face_rec.SetObservationGaze(
+      open_face_rec->SetObservationPose(pose_estimate);
+      open_face_rec->SetObservationGaze(
           gazeDirection0, gazeDirection1, gazeAngle,
           LandmarkDetector::CalculateAllEyeLandmarks(face_model),
           LandmarkDetector::Calculate3DEyeLandmarks(
               face_model, sequence_reader.fx, sequence_reader.fy,
               sequence_reader.cx, sequence_reader.cy));
-      open_face_rec.SetObservationTimestamp(sequence_reader.time_stamp);
-      open_face_rec.SetObservationFaceID(0);
-      open_face_rec.SetObservationFrameNumber(sequence_reader.GetFrameNumber());
-      open_face_rec.SetObservationFaceAlign(sim_warped_img);
-      open_face_rec.WriteObservation();
-      open_face_rec.WriteObservationTracked();
+      open_face_rec->SetObservationTimestamp(sequence_reader.time_stamp);
+      open_face_rec->SetObservationFaceID(0);
+      open_face_rec->SetObservationFrameNumber(sequence_reader.GetFrameNumber());
+      open_face_rec->SetObservationFaceAlign(sim_warped_img);
 
-      // face_analyser.PostprocessOutputFile(open_face_rec.GetCSVFile());
+      // open_face_rec->WriteObservation();
+      // open_face_rec->WriteObservationTracked();
 
       copyMakeBorder(rgb_image, rgb_image, rgb_image.rows / 7,
                      rgb_image.rows / 7, rgb_image.cols / 7, rgb_image.cols / 7,

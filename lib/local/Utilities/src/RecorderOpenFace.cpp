@@ -35,6 +35,7 @@
 
 // For sorting
 #include <algorithm>
+#include <map>
 
 // File manipulation
 #include <fstream>
@@ -344,6 +345,24 @@ void RecorderOpenFace::VideoWritingTask()
 
 	}
 
+}
+
+std::map<std::string, std::string> RecorderOpenFace::DumpCurrentRecord() {
+  std::map<std::string, std::string> record = {
+    {"foo", "bar"}
+  };
+
+  // std::ostringstream ss;
+  // std::cout << landmarks_2D.rows << "\n";
+
+  // ss << landmarks_2D.rows / 2;
+  // std::string s(ss.str());
+  // record["test"] = s;
+  // record["num_face_landmarks"] = std::to_string(landmarks_2D.rows / 2);
+  // record["num_eye_landmarks"] = std::to_string(eye_landmarks2D.size());
+  // record["num_model_modes"] = std::to_string(pdm_params_local.rows);
+
+  return record;
 }
 
 void RecorderOpenFace::WriteObservation()

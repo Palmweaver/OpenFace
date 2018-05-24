@@ -44,6 +44,7 @@
 
 // System includes
 #include <vector>
+#include <map>
 
 // OpenCV includes
 #include <opencv2/core/core.hpp>
@@ -105,6 +106,8 @@ namespace Utilities
 
 		// Write out all observations for current face (except for tracked image/video)
 		void WriteObservation();
+
+		std::map<std::string, std::string> DumpCurrentRecord(void);
 
 		// Separate method for writing tracked video observation, this is done because video observation is written once a frame/image, other observations can happen multiple times a frame/image
 		void WriteObservationTracked();
