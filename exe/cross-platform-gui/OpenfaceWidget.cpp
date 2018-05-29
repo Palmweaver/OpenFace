@@ -28,19 +28,19 @@ static std::map<std::string, std::string> action_unit_name = {
     {"AU23", "Lip Tightener"},
     {"AU25", "Lips part"},
     {"AU26", "Jaw Drop"},
-    {"AU28", "Lip Suck"},
+    // {"AU28", "Lip Suck"},
     {"AU45", "Blink"},
 };
 
 OpenfaceWidget::OpenfaceWidget(QWidget *parent)
     : QMainWindow(parent), m_main_app_splitter(this),
-      action_unit_format_string("Action Unit:%s (%s) %s") {
+      action_unit_format_string("Action Unit:%s (%s) %.2f") {
 
   QTimer *timer_worker = new QTimer{this};
   QObject::connect(timer_worker, &QTimer::timeout, &m_thread,
                    &RenderThread::do_csv_work);
 
-  timer_worker->start(2000);
+  timer_worker->start(1500);
 
   QObject::connect(&m_thread, &RenderThread::action_units_produced, this,
                    &OpenfaceWidget::update_action_units_display);
@@ -74,6 +74,8 @@ void OpenfaceWidget::setup_action_unit_display(void) {
     m_action_unit_collection[action_unit] = new QLabel{"0", this};
   }
 
+  m_action_unit_layout.addWidget(new QLabel{"Red means OpenFace does not think this feature exists, intensity range is 0-5", this});
+
   for (auto &pair : m_action_unit_collection) {
     m_action_unit_layout.addWidget(pair.second);
   }
@@ -86,20 +88,18 @@ void OpenfaceWidget::updatePixmap(const QImage &qimg, double scaleFactor) {
 }
 
 void OpenfaceWidget::update_action_units_display(
-    std::map<std::string, bool> turned_on_action_units) {
+    std::map<std::string, std::pair<bool, double>> turned_on_action_units) {
 
   for (auto &pair : turned_on_action_units) {
     std::stringstream ss;
     QLabel *label =
         static_cast<QLabel *>(m_action_unit_collection[pair.first]);
-    if (pair.second == false) {
+    if (pair.second.first == false) {
       label->setStyleSheet("background-color:red;");
-      ss << action_unit_format_string % pair.first % action_unit_name[pair.first] %
-                " is not turned on";
+      ss << action_unit_format_string % pair.first % action_unit_name[pair.first] % pair.second.second;
     } else {
       label->setStyleSheet("background-color:green;");
-      ss << (action_unit_format_string % pair.first % action_unit_name[pair.first] %
-             " is working");
+      ss << action_unit_format_string % pair.first % action_unit_name[pair.first] % pair.second.second;
     }
 
     label->setText(QString::fromStdString(ss.str()));

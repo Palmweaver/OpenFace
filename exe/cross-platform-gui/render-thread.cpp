@@ -34,10 +34,20 @@ RenderThread::~RenderThread() {
 void RenderThread::do_csv_work(void) {
   auto action_units_record = face_analyser->GetCurrentAUsClass();
   auto intensities = face_analyser->GetCurrentAUsReg();
-  std::map<std::string, bool> action_units = {};
+  std::map<std::string, std::pair<bool, double>> action_units = {};
 
   for (auto &kv : action_units_record) {
-    action_units[kv.first] = bool(kv.second);
+    double confidence = -1;
+    bool did_find = false;
+    for (auto &intensity_pair : intensities) {
+      if (intensity_pair.first == kv.first) {
+        did_find = true;
+        confidence = intensity_pair.second;
+      }
+    }
+    if (did_find) {
+      action_units[kv.first] = std::make_pair(bool(kv.second), confidence);
+    }
   }
 
   emit action_units_produced(action_units);

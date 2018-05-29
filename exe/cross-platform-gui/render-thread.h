@@ -16,7 +16,7 @@ public:
 
 signals:
   void renderedImage(const QImage &image, double scaleFactor);
-  void action_units_produced(std::map<std::string, bool> turned_on_action_units);
+  void action_units_produced(std::map<std::string, std::pair<bool, double>> turned_on_action_units);
 
 protected:
   void run() override;

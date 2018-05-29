@@ -25,7 +25,7 @@ protected:
 
 private slots:
   void updatePixmap(const QImage &image, double scaleFactor);
-  void update_action_units_display(std::map<std::string, bool> turned_on_action_units);
+  void update_action_units_display(std::map<std::string, std::pair<bool, double>> turned_on_action_units);
 
 private:
   RenderThread m_thread;
