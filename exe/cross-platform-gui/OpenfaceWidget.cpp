@@ -1,11 +1,13 @@
 #include <iostream>
+#include <sstream>
+
+#include <boost/range/algorithm.hpp>
+#include <boost/range/adaptor/map.hpp>
 
 #include <QApplication>
 #include <QLabel>
 #include <QTextEdit>
 #include <QTimer>
-
-#include <sstream>
 
 #include "OpenfaceWidget.h"
 
@@ -65,26 +67,12 @@ OpenfaceWidget::OpenfaceWidget(QWidget *parent)
 }
 
 void OpenfaceWidget::setup_action_unit_display(void) {
+  std::vector<std::string> names;
+  boost::copy(action_unit_name | boost::adaptors::map_keys, std::back_inserter(names));
 
-
-  m_action_unit_collection["AU01"] = new QLabel{"0", this};
-  m_action_unit_collection["AU02"] = new QLabel{"0", this};
-  m_action_unit_collection["AU04"] = new QLabel{"0", this};
-  m_action_unit_collection["AU05"] = new QLabel{"0", this};
-  m_action_unit_collection["AU06"] = new QLabel{"0", this};
-  m_action_unit_collection["AU07"] = new QLabel{"0", this};
-  m_action_unit_collection["AU09"] = new QLabel{"0", this};
-  m_action_unit_collection["AU10"] = new QLabel{"0", this};
-  m_action_unit_collection["AU12"] = new QLabel{"0", this};
-  m_action_unit_collection["AU14"] = new QLabel{"0", this};
-  m_action_unit_collection["AU15"] = new QLabel{"0", this};
-  m_action_unit_collection["AU17"] = new QLabel{"0", this};
-  m_action_unit_collection["AU20"] = new QLabel{"0", this};
-  m_action_unit_collection["AU23"] = new QLabel{"0", this};
-  m_action_unit_collection["AU25"] = new QLabel{"0", this};
-  m_action_unit_collection["AU26"] = new QLabel{"0", this};
-  m_action_unit_collection["AU28"] = new QLabel{"0", this};
-  m_action_unit_collection["AU45"] = new QLabel{"0", this};
+  for (auto &action_unit: names) {
+    m_action_unit_collection[action_unit] = new QLabel{"0", this};
+  }
 
   for (auto &pair : m_action_unit_collection) {
     m_action_unit_layout.addWidget(pair.second);
