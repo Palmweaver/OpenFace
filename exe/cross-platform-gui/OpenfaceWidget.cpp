@@ -1,33 +1,55 @@
 #include <iostream>
 
 #include <QApplication>
-#include <QTextEdit>
-#include <QVBoxLayout>
 #include <QLabel>
-#include <QPushButton>
+#include <QTextEdit>
 #include <QTimer>
+
+#include <sstream>
 
 #include "OpenfaceWidget.h"
 
-OpenfaceWidget::OpenfaceWidget(QWidget *parent) : QMainWindow(parent), m_main_app_splitter(this) {
+static std::map<std::string, std::string> action_unit_name = {
+    {"AU01", "Inner Brow Raiser"},
+    {"AU02", "Outer Brow Raiser"},
+    {"AU04", "Brow Lowerer"},
+    {"AU05", "Upper Lid Raiser"},
+    {"AU06", "Cheek Raiser"},
+    {"AU07", "Lid Tightener"},
+    {"AU09", "Nose Wrinkler"},
+    {"AU10", "Upper Lip Raiser"},
+    {"AU12", "Lip Corner Puller"},
+    {"AU14", "Dimpler"},
+    {"AU15", "Lip Corner Depressor"},
+    {"AU17", "Chin Raiser"},
+    {"AU20", "Lip stretcher"},
+    {"AU23", "Lip Tightener"},
+    {"AU25", "Lips part"},
+    {"AU26", "Jaw Drop"},
+    {"AU28", "Lip Suck"},
+    {"AU45", "Blink"},
+};
+
+OpenfaceWidget::OpenfaceWidget(QWidget *parent)
+    : QMainWindow(parent), m_main_app_splitter(this),
+      action_unit_format_string("Action Unit:%s (%s) %s") {
 
   QTimer *timer_worker = new QTimer{this};
-  QObject::connect(timer_worker, &QTimer::timeout, &m_thread, &RenderThread::do_csv_work);
+  QObject::connect(timer_worker, &QTimer::timeout, &m_thread,
+                   &RenderThread::do_csv_work);
 
   timer_worker->start(2000);
 
-  QObject::connect(&m_thread, &RenderThread::renderedImage,
-		   this, &OpenfaceWidget::updatePixmap);
+  QObject::connect(&m_thread, &RenderThread::action_units_produced, this,
+                   &OpenfaceWidget::update_action_units_display);
+
+  QObject::connect(&m_thread, &RenderThread::renderedImage, this,
+                   &OpenfaceWidget::updatePixmap);
   QObject::connect(&m_thread, &QThread::finished, this, &QObject::deleteLater);
 
-  QVBoxLayout layout{};
-  QPushButton *quitBtn = new QPushButton{"Close", this};
-  QObject::connect(quitBtn, &QPushButton::clicked, qApp, &QApplication::quit);
+  m_information_container.setLayout(&m_action_unit_layout);
 
-  layout.addWidget(quitBtn);
-
-  m_information_container.setLayout(&layout);
-
+  // Two main views
   m_main_app_splitter.addWidget(&m_graphics_view);
   m_main_app_splitter.addWidget(&m_information_container);
 
@@ -37,11 +59,61 @@ OpenfaceWidget::OpenfaceWidget(QWidget *parent) : QMainWindow(parent), m_main_ap
   setCentralWidget(&m_main_app_splitter);
   setWindowTitle(tr("OpenfaceWidget"));
   resize(1280, 720);
+
+  setup_action_unit_display();
   m_thread.start();
+}
+
+void OpenfaceWidget::setup_action_unit_display(void) {
+
+
+  m_action_unit_collection["AU01"] = new QLabel{"0", this};
+  m_action_unit_collection["AU02"] = new QLabel{"0", this};
+  m_action_unit_collection["AU04"] = new QLabel{"0", this};
+  m_action_unit_collection["AU05"] = new QLabel{"0", this};
+  m_action_unit_collection["AU06"] = new QLabel{"0", this};
+  m_action_unit_collection["AU07"] = new QLabel{"0", this};
+  m_action_unit_collection["AU09"] = new QLabel{"0", this};
+  m_action_unit_collection["AU10"] = new QLabel{"0", this};
+  m_action_unit_collection["AU12"] = new QLabel{"0", this};
+  m_action_unit_collection["AU14"] = new QLabel{"0", this};
+  m_action_unit_collection["AU15"] = new QLabel{"0", this};
+  m_action_unit_collection["AU17"] = new QLabel{"0", this};
+  m_action_unit_collection["AU20"] = new QLabel{"0", this};
+  m_action_unit_collection["AU23"] = new QLabel{"0", this};
+  m_action_unit_collection["AU25"] = new QLabel{"0", this};
+  m_action_unit_collection["AU26"] = new QLabel{"0", this};
+  m_action_unit_collection["AU28"] = new QLabel{"0", this};
+  m_action_unit_collection["AU45"] = new QLabel{"0", this};
+
+  for (auto &pair : m_action_unit_collection) {
+    m_action_unit_layout.addWidget(pair.second);
+  }
 }
 
 void OpenfaceWidget::updatePixmap(const QImage &qimg, double scaleFactor) {
   m_pixmap.setPixmap(QPixmap::fromImage(qimg.rgbSwapped()));
   m_graphics_view.fitInView(&m_pixmap, Qt::KeepAspectRatio);
   update();
+}
+
+void OpenfaceWidget::update_action_units_display(
+    std::map<std::string, bool> turned_on_action_units) {
+
+  for (auto &pair : turned_on_action_units) {
+    std::stringstream ss;
+    QLabel *label =
+        static_cast<QLabel *>(m_action_unit_collection[pair.first]);
+    if (pair.second == false) {
+      label->setStyleSheet("background-color:red;");
+      ss << action_unit_format_string % pair.first % action_unit_name[pair.first] %
+                " is not turned on";
+    } else {
+      label->setStyleSheet("background-color:green;");
+      ss << (action_unit_format_string % pair.first % action_unit_name[pair.first] %
+             " is working");
+    }
+
+    label->setText(QString::fromStdString(ss.str()));
+  }
 }

@@ -1,8 +1,11 @@
+#include <algorithm>
 #include <iostream>
+#include <map>
 #include <unistd.h>
 
 #include <QImage>
 
+#include <FaceAnalyser.h>
 #include <GazeEstimation.h>
 #include <LandmarkCoreIncludes.h>
 #include <RecorderOpenFace.h>
@@ -10,13 +13,13 @@
 #include <SequenceCapture.h>
 #include <VisualizationUtils.h>
 #include <Visualizer.h>
-#include <FaceAnalyser.h>
+#include <iterator>
 
 #include "render-thread.h"
 
 static FaceAnalysis::FaceAnalyser *face_analyser = nullptr;
+
 static Utilities::RecorderOpenFace *open_face_rec = nullptr;
-static bool can_process = false;
 
 RenderThread::RenderThread(QObject *parent) : QThread(parent) {}
 
@@ -29,22 +32,20 @@ RenderThread::~RenderThread() {
 }
 
 void RenderThread::do_csv_work(void) {
-  can_process = false;
-  auto record = open_face_rec->DumpCurrentRecord();
-  for (auto& kv : record) {
-    std::cout << kv.first << ":" << kv.second << "\n";
+  auto action_units_record = face_analyser->GetCurrentAUsClass();
+  auto intensities = face_analyser->GetCurrentAUsReg();
+  std::map<std::string, bool> action_units = {};
+
+  for (auto &kv : action_units_record) {
+    action_units[kv.first] = bool(kv.second);
   }
-// for (auto& kv : myMap) {
-  // for (std::string &action_unit: record) {
-  //   std::cout << action_unit << "\n";
-  // }
-  // face_analyser->PostprocessOutputFile(open_face_rec->GetCSVFile());
-  can_process = true;
+
+  emit action_units_produced(action_units);
 }
 
-
 void RenderThread::run() {
-  std::vector<std::string> arguments{"openface-cross-platform-gui", "-out_dir", "/Users/qz1llg/Repos/OpenFace/test-dump"};
+  std::vector<std::string> arguments{"openface-cross-platform-gui", "-out_dir",
+                                     "/Users/qz1llg/Repos/OpenFace/test-dump"};
   LandmarkDetector::FaceModelParameters det_parameters(arguments);
 
   // The modules that are being used for tracking
@@ -98,8 +99,8 @@ void RenderThread::run() {
         sequence_reader.cy,
         sequence_reader.fps};
 
-    open_face_rec = new Utilities::RecorderOpenFace {sequence_reader.name,
-						     recording_params, arguments};
+    open_face_rec = new Utilities::RecorderOpenFace{
+        sequence_reader.name, recording_params, arguments};
 
     while (!rgb_image.empty()) {
 
@@ -123,8 +124,7 @@ void RenderThread::run() {
         GazeAnalysis::EstimateGaze(
             face_model, gazeDirection1, sequence_reader.fx, sequence_reader.fy,
             sequence_reader.cx, sequence_reader.cy, false);
-	gazeAngle = GazeAnalysis::GetGazeAngle(gazeDirection0, gazeDirection1);
-
+        gazeAngle = GazeAnalysis::GetGazeAngle(gazeDirection0, gazeDirection1);
       }
       cv::Mat sim_warped_img;
       cv::Mat_<double> hog_descriptor;
@@ -135,10 +135,10 @@ void RenderThread::run() {
       if (recording_params.outputAlignedFaces() ||
           recording_params.outputHOG() || recording_params.outputAUs() ||
           visualizer.vis_align || visualizer.vis_hog || visualizer.vis_aus) {
-        face_analyser->AddNextFrame(
-            rgb_image, face_model.detected_landmarks,
-            face_model.detection_success, sequence_reader.time_stamp,
-            sequence_reader.IsWebcam());
+        face_analyser->AddNextFrame(rgb_image, face_model.detected_landmarks,
+                                    face_model.detection_success,
+                                    sequence_reader.time_stamp,
+                                    sequence_reader.IsWebcam());
         face_analyser->GetLatestAlignedFace(sim_warped_img);
         face_analyser->GetLatestHOG(hog_descriptor, num_hog_rows, num_hog_cols);
       }
@@ -170,13 +170,14 @@ void RenderThread::run() {
 
       rgb_image = visualizer.GetVisImage();
 
-      open_face_rec->SetObservationHOG(detection_success, hog_descriptor,
-                                      num_hog_rows, num_hog_cols,
-                                      31); // The number of channels in HOG is
-                                           // fixed at the moment, as using FHOG
+      open_face_rec->SetObservationHOG(
+          detection_success, hog_descriptor, num_hog_rows, num_hog_cols,
+          31); // The number of channels in HOG is
+               // fixed at the moment, as using FHOG
       open_face_rec->SetObservationVisualization(visualizer.GetVisImage());
       open_face_rec->SetObservationActionUnits(
-          face_analyser->GetCurrentAUsReg(), face_analyser->GetCurrentAUsClass());
+          face_analyser->GetCurrentAUsReg(),
+          face_analyser->GetCurrentAUsClass());
       open_face_rec->SetObservationLandmarks(
           face_model.detected_landmarks,
           face_model.GetShape(sequence_reader.fx, sequence_reader.fy,
@@ -192,7 +193,8 @@ void RenderThread::run() {
               sequence_reader.cx, sequence_reader.cy));
       open_face_rec->SetObservationTimestamp(sequence_reader.time_stamp);
       open_face_rec->SetObservationFaceID(0);
-      open_face_rec->SetObservationFrameNumber(sequence_reader.GetFrameNumber());
+      open_face_rec->SetObservationFrameNumber(
+          sequence_reader.GetFrameNumber());
       open_face_rec->SetObservationFaceAlign(sim_warped_img);
 
       // open_face_rec->WriteObservation();
