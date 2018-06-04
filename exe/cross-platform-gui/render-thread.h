@@ -16,12 +16,14 @@ public:
 
 signals:
   void renderedImage(const QImage &image, double scaleFactor);
-  void action_units_produced(std::map<std::string, std::pair<bool, double>> turned_on_action_units);
+  void action_units_produced(
+      std::map<std::string, std::pair<bool, double>> turned_on_action_units);
 
 protected:
   void run() override;
 public slots:
   void do_csv_work(void);
+
 private:
   QMutex mutex;
   QWaitCondition condition;

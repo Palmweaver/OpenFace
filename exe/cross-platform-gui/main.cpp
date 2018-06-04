@@ -1,6 +1,6 @@
 // -*- c++ -*-
 #include <QApplication>
-
+#include <iostream>
 #include "OpenfaceWidget.h"
 
 int main(int argc, char **argv) {

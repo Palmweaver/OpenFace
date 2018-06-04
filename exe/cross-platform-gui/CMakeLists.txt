@@ -10,19 +10,26 @@ if(WIN32)
   set(CMAKE_WIN32_EXECUTABLE ON)
 endif()
 
-
 #OpenBlas library
 include_directories(../../lib/3rdParty/OpenBLAS/include)
 
 # Local libraries
 include_directories(${LandmarkDetector_SOURCE_DIR}/include)
-	
+
 include_directories(../../lib/local/LandmarkDetector/include)
-include_directories(../../lib/local/FaceAnalyser/include)	
-include_directories(../../lib/local/GazeAnalyser/include)	
-include_directories(../../lib/local/Utilities/include)	
-			
-add_executable(openface-cross-platform-gui main.cpp render-thread.cpp OpenfaceWidget.cpp)
+include_directories(../../lib/local/FaceAnalyser/include)
+include_directories(../../lib/local/GazeAnalyser/include)
+include_directories(../../lib/local/Utilities/include)
+
+add_executable(openface-cross-platform-gui
+  main.cpp
+  render-thread.cpp
+  subprocess-worker-thread.cpp
+  OpenfaceWidget.cpp
+  process.cpp
+  subprocess.hpp
+  process_unix.cpp
+  )
 
 target_link_libraries(openface-cross-platform-gui LandmarkDetector)
 target_link_libraries(openface-cross-platform-gui FaceAnalyser)
