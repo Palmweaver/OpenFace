@@ -47,15 +47,12 @@ OpenfaceWidget::OpenfaceWidget(QWidget *parent)
   double c = 1.0;
   QObject::connect(timer_worker, &QTimer::timeout, [this, &c]() {
     using namespace TinyProcessLib;
-    Process process2("./program.py", "", nullptr,
-                     [this](const char *bytes, size_t n) {
-                       // std::stringstream ss;
-                       // ss << m_process_result_format_string % "Result" % c++;
-                       // std::cout << "Second timer called" << ss.str() << "\n";
-                       // emit processed_results(msg);
-                       std::string reply{bytes, n};
-					   m_process_result.setText(QString::fromStdString(reply));
-                     });
+    Process process2(
+        "/Users/$USER/Repos/OpenFace/exe/cross-platform-gui/program.py", "",
+        nullptr, [this](const char *bytes, size_t n) {
+          std::string reply{bytes, n};
+          m_process_result.setText(QString::fromStdString(reply));
+        });
   });
 
   QObject::connect(timer_worker, &QTimer::timeout, &m_thread,
