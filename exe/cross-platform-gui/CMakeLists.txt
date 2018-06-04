@@ -24,7 +24,6 @@ include_directories(../../lib/local/Utilities/include)
 add_executable(openface-cross-platform-gui
   main.cpp
   render-thread.cpp
-  subprocess-worker-thread.cpp
   OpenfaceWidget.cpp
   process.cpp
   subprocess.hpp

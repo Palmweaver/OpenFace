@@ -47,12 +47,17 @@ OpenfaceWidget::OpenfaceWidget(QWidget *parent)
   double c = 1.0;
   QObject::connect(timer_worker, &QTimer::timeout, [this, &c]() {
     using namespace TinyProcessLib;
-    Process process2(
+    Process subproc{
         "/Users/$USER/Repos/OpenFace/exe/cross-platform-gui/program.py", "",
-        nullptr, [this](const char *bytes, size_t n) {
+        nullptr,
+        [this](const char *bytes, size_t n) {
           std::string reply{bytes, n};
           m_process_result.setText(QString::fromStdString(reply));
-        });
+        },
+        true};
+
+    subproc.write("Please get this data\n");
+    subproc.close_stdin();
   });
 
   QObject::connect(timer_worker, &QTimer::timeout, &m_thread,
@@ -66,20 +71,10 @@ OpenfaceWidget::OpenfaceWidget(QWidget *parent)
 
   QObject::connect(&m_thread, &QThread::finished, this, &QObject::deleteLater);
 
-  // Python worker ML process
-  QObject::connect(this, &OpenfaceWidget::do_classify_parameters,
-                   &m_subprocess_worker_thread,
-                   &SubprocessWorkerThread::do_classify_parameters);
-  QObject::connect(&m_subprocess_worker_thread,
-                   &SubprocessWorkerThread::processed_results, this,
-                   &OpenfaceWidget::ml_program_result);
-
   m_information_container.setLayout(&m_action_unit_layout);
-
   // Two main views
   m_main_app_splitter.addWidget(&m_graphics_view);
   m_main_app_splitter.addWidget(&m_information_container);
-
   m_graphics_view.setScene(new QGraphicsScene(this));
   m_graphics_view.scene()->addItem(&m_pixmap);
   m_graphics_view.setMinimumWidth(950);
@@ -89,7 +84,6 @@ OpenfaceWidget::OpenfaceWidget(QWidget *parent)
   setup_action_unit_display();
   m_action_unit_layout.addWidget(&m_process_result);
   m_thread.start();
-  // m_subprocess_worker_thread.start();
   timer_worker->start(1500);
 }
 
@@ -115,10 +109,6 @@ void OpenfaceWidget::setup_action_unit_display(void) {
 void OpenfaceWidget::updatePixmap(const QImage &qimg, double scaleFactor) {
   m_pixmap.setPixmap(QPixmap::fromImage(qimg.rgbSwapped()));
   m_graphics_view.fitInView(&m_pixmap, Qt::KeepAspectRatio);
-}
-
-void OpenfaceWidget::ml_program_result(std::string &) {
-  //
 }
 
 void OpenfaceWidget::update_action_units_display(
