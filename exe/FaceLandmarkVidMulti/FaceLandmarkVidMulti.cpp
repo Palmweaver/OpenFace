@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 	vector<LandmarkDetector::CLNF> face_models;
 	vector<bool> active_models;
 
-	int num_faces_max = 14;
+	int num_faces_max = 30;
 
 	LandmarkDetector::CLNF face_model(det_parameters[0].model_location);
 
